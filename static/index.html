@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clipper — YouTube se clips</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #181b22; --line: #2a2f3a; --text: #eceef3; --muted: #9aa3b2;
+    --accent: #ffb400; --accent-text: #1a1300; --danger: #ff6b6b; --ok: #4cd08a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f5f6f8; --card: #fff; --line: #dde1e8; --text: #151821; --muted: #5d6676; --accent-text: #1a1300; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  input[type=url], select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
+         background: var(--bg); color: var(--text); font-size: 16px; }
+  input[type=range] { width: 100%; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 16px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 16px; }
+  .checks label { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text); font-size: 15px; cursor: pointer; }
+  button.primary { margin-top: 18px; width: 100%; padding: 14px; border: 0; border-radius: 10px; font-size: 17px;
+         font-weight: 700; background: var(--accent); color: var(--accent-text); cursor: pointer; }
+  button.primary:disabled { opacity: .5; cursor: wait; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+  .warn { color: var(--danger); }
+  .bar { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 10px 0 6px; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+  #status { display: none; }
+  .clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  .clip video { width: 100%; border-radius: 10px; background: #000; max-height: 460px; }
+  .clip h3 { font-size: 16px; margin: 10px 0 2px; }
+  .clip .meta { color: var(--muted); font-size: 13px; }
+  .clip .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .clip a { flex: 1; text-align: center; padding: 9px; border-radius: 8px; border: 1px solid var(--line);
+            color: var(--text); text-decoration: none; font-size: 14px; }
+  .clip a.dl { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>✂️ Clipper</h1>
+  <p class="sub">YouTube link paste karo — 1 min aur 2 min ke best clips, captions, translation aur editing ke saath.</p>
+
+  <form id="form" class="card">
+    <label for="url">YouTube link</label>
+    <input id="url" type="url" required placeholder="https://www.youtube.com/watch?v=...">
+
+    <div class="grid">
+      <div>
+        <label>Clip length</label>
+        <div class="checks" style="margin-top:0">
+          <label><input type="checkbox" name="len" value="60" checked> 1 min</label>
+          <label><input type="checkbox" name="len" value="120" checked> 2 min</label>
+        </div>
+      </div>
+      <div>
+        <label for="per">Har length ke kitne clips</label>
+        <select id="per"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
+      </div>
+      <div>
+        <label for="src">Video ki language</label>
+        <select id="src"><option value="">Auto-detect</option></select>
+      </div>
+      <div>
+        <label for="tgt">Translate karo</label>
+        <select id="tgt"><option value="">Nahi (original)</option></select>
+      </div>
+      <div>
+        <label for="cap">Captions</label>
+        <select id="cap">
+          <option value="original">Original language</option>
+          <option value="translated">Translated</option>
+          <option value="both">Dono (translated bada, original chhota)</option>
+          <option value="none">Koi caption nahi</option>
+        </select>
+      </div>
+      <div>
+        <label for="vmode">Vertical (9:16) style</label>
+        <select id="vmode">
+          <option value="face">Face-tracking crop</option>
+          <option value="blur">Blur background (poori video dikhe)</option>
+          <option value="off">Original 16:9 rakho</option>
+        </select>
+      </div>
+      <div id="musicBox">
+        <label for="music">Background music</label>
+        <select id="music"><option value="">Koi nahi</option></select>
+      </div>
+      <div>
+        <label for="mvol">Music volume</label>
+        <input id="mvol" type="range" min="0.03" max="0.4" step="0.01" value="0.12">
+      </div>
+    </div>
+
+    <div class="checks">
+      <label><input id="fill" type="checkbox" checked> Filler words hatao (umm, uh)</label>
+      <label><input id="sil" type="checkbox" checked> Lambi silence kaato</label>
+      <label><input id="title" type="checkbox" checked> Shuruaat mein title dikhao</label>
+      <label><input id="dub" type="checkbox"> AI dubbing (translated awaaz)</label>
+    </div>
+
+    <button class="primary" id="go" type="submit">Clips banao</button>
+    <p class="note" id="llmWarn"></p>
+    <p class="note">⚠️ Sirf apne videos ya jin videos ki permission ho unhi ke clips banao. Doosron ke videos download karna YouTube ki Terms of Service aur copyright ke khilaf ho sakta hai.</p>
+  </form>
+
+  <div id="status" class="card">
+    <strong id="msg">…</strong>
+    <div class="bar"><div id="fillbar"></div></div>
+    <span class="note" id="detail"></span>
+  </div>
+
+  <div id="results" class="clips"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let timer = null;
+
+async function init() {
+  const cfg = await (await fetch('/api/config')).json();
+  for (const l of cfg.languages) {
+    $('src').add(new Option(l.name, l.code));
+    $('tgt').add(new Option(l.name, l.code));
+  }
+  cfg.music.forEach(m => $('music').add(new Option(m, m)));
+  if (!cfg.music.length) $('musicBox').querySelector('label').textContent = 'Background music (music/ folder mein mp3 daalo)';
+  if (!cfg.llm_ready) {
+    $('llmWarn').innerHTML = '<span class="warn">ANTHROPIC_API_KEY set nahi hai: clips local heuristic se chune jayenge aur translation/dubbing band rahegi.</span>';
+    $('tgt').disabled = true; $('dub').disabled = true; $('cap').querySelectorAll('option').forEach(o => { if (o.value==='translated'||o.value==='both') o.disabled = true; });
+  }
+}
+
+$('tgt').addEventListener('change', () => {
+  if ($('tgt').value && $('cap').value === 'original') $('cap').value = 'translated';
+  if (!$('tgt').value) { $('cap').value = 'original'; $('dub').checked = false; }
+});
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const lengths = [...document.querySelectorAll('input[name=len]:checked')].map(x => +x.value);
+  if (!lengths.length) return alert('Kam se kam ek clip length chuno.');
+  const vm = $('vmode').value;
+  const body = {
+    url: $('url').value.trim(), lengths, per_length: +$('per').value,
+    source_lang: $('src').value || null, target_lang: $('tgt').value || null,
+    caption_mode: $('cap').value, vertical: vm !== 'off', vertical_mode: vm === 'blur' ? 'blur' : 'face',
+    remove_fillers: $('fill').checked, trim_silence: $('sil').checked,
+    music: $('music').value || null, music_volume: +$('mvol').value,
+    dub: $('dub').checked, show_title: $('title').checked,
+  };
+  $('go').disabled = true; $('results').innerHTML = '';
+  show('Shuru ho raha hai…', 0);
+  const r = await fetch('/api/jobs', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  if (!r.ok) {
+    let err = 'Kuch galat hua.';
+    try { const j = await r.json(); err = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail); } catch {}
+    $('go').disabled = false; return show('❌ ' + err, 0);
+  }
+  poll((await r.json()).id);
+});
+
+function show(msg, pct, detail='') {
+  $('status').style.display = 'block';
+  $('msg').textContent = msg; $('fillbar').style.width = pct + '%'; $('detail').textContent = detail;
+}
+
+function poll(id) {
+  clearInterval(timer);
+  const tick = async () => {
+    const j = await (await fetch('/api/jobs/' + id)).json();
+    render(id, j.clips || []);
+    if (j.status === 'error') { clearInterval(timer); $('go').disabled = false; return show('❌ ' + (j.error || j.message), 0); }
+    if (j.status === 'done') { clearInterval(timer); $('go').disabled = false; return show('✅ Clips tayyar hain!', 100, j.video_title || ''); }
+    show(j.message || '…', j.progress || 0, j.video_title || '');
+  };
+  tick(); timer = setInterval(tick, 2000);
+}
+
+const rendered = new Set();
+function render(id, clips) {
+  if (!clips.length) rendered.clear();
+  for (const c of clips) {
+    if (rendered.has(c.file)) continue;
+    rendered.add(c.file);
+    const base = `/api/jobs/${id}/clips/${c.file}`;
+    const d = document.createElement('div');
+    d.className = 'card clip';
+    d.innerHTML = `<video controls preload="metadata" playsinline src="${base}"></video>
+      <h3></h3>
+      <div class="meta"><span class="badge">${c.target === 60 ? '1 min' : c.target === 120 ? '2 min' : c.target + 's'}</span>
+        ${c.duration}s · source ${c.source_start}s–${c.source_end}s</div>
+      <div class="meta"></div>
+      <div class="acts"><a class="dl" href="${base}?download=true">Download</a>
+        ${c.srt ? `<a href="/api/jobs/${id}/clips/${c.srt}?download=true">.srt</a>` : ''}</div>`;
+    d.querySelector('h3').textContent = c.title || c.file;
+    d.querySelectorAll('.meta')[1].textContent = c.reason || '';
+    $('results').appendChild(d);
+  }
+}
+init();
+</script>
+</body>
+</html>
